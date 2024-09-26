@@ -1,0 +1,114 @@
+# NetWarden example configuration.
+#
+# Only the hosts listed under `hosts:` are ever contacted. NetWarden never scans networks.
+# Secrets are pulled from the environment with ${VAR} or ${VAR:-default}; see .env.example.
+
+defaults:
+  snmp:
+    version: "2c"
+    community: ${NETWARDEN_SNMP_COMMUNITY}
+    timeout: 2
+    retries: 1
+
+thresholds:
+  ntp_offset_warn_ms: 100
+  ntp_offset_crit_ms: 500
+  ntp_max_stratum: 5
+  dns_latency_warn_ms: 200
+  dns_latency_crit_ms: 1000
+  tcp_latency_warn_ms: 300
+  tcp_latency_crit_ms: 1500
+  cpu_warn_pct: 80
+  cpu_crit_pct: 95
+  if_errors_warn: 100
+  if_errors_crit: 1000
+  dhcp_pool_warn_pct: 80
+  dhcp_pool_crit_pct: 95
+  min_uptime_seconds: 600
+
+polling:
+  interval_seconds: 60
+  concurrency: 20
+  probe_timeout_seconds: 10
+
+alerting:
+  consecutive_failures: 2
+  notify_on_recovery: true
+  renotify_minutes: 60
+  notifiers:
+    - type: console
+    - type: jsonl
+      path: ./data/alerts.jsonl
+    - type: webhook
+      url: ${NETWARDEN_WEBHOOK_URL:-}
+      min_severity: critical
+
+# Remediation is OFF by default. Even when enabled, actions only execute with
+# `netwarden remediate --apply`; otherwise scripts are generated for review (dry run).
+remediation:
+  enabled: false
+  script_dir: ./remediation_scripts
+  audit_log: ./data/remediation_audit.jsonl
+  ssh_key_path: ${NETWARDEN_SSH_KEY:-}
+  command_timeout_seconds: 60
+
+storage:
+  sqlite_path: ./data/netwarden.db
+  report_dir: ./reports
+  history_days: 14
+
+hosts:
+  - name: core-sw-01
+    address: 10.0.0.2
+    tags: [switch, core]
+    checks:
+      snmp:
+        interfaces: [1, 2, 24]
+      ntp: {}
+      tcp:
+        ports: [22]
+
+  - name: dns-01
+    address: 10.0.0.10
+    tags: [linux, dns, ntp]
+    checks:
+      snmp:
+        credentials:
+          version: "3"
+          username: ${NETWARDEN_SNMPV3_USER:-netwarden}
+          auth_protocol: SHA256
+          auth_key: ${NETWARDEN_SNMPV3_AUTH_KEY}
+          priv_protocol: AES
+          priv_key: ${NETWARDEN_SNMPV3_PRIV_KEY}
+      dns:
+        records:
+          - name: intranet.example.internal
+            type: A
+            expect: [10.0.0.50]
+          - name: example.internal
+            type: MX
+      ntp: {}
+      tcp:
+        ports: [22, 53]
+    thresholds:
+      cpu_warn_pct: 70
+    remediation:
+      ssh_user: netops
+      allowed_actions: [restart_service, flush_dns_cache, ntp_step]
+      services: [named, chrony]
+
+  - name: dhcp-01
+    address: 10.0.0.11
+    tags: [linux, dhcp]
+    checks:
+      dhcp:
+        lease_file: /var/lib/dhcp/dhcpd.leases
+        lease_format: isc
+        pool_size: 200
+        active_probe: false
+      tcp:
+        ports: [22]
+    remediation:
+      ssh_user: netops
+      allowed_actions: [restart_service]
+      services: [isc-dhcp-server]
