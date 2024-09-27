@@ -174,9 +174,10 @@ class StateStore:
 
     def open_alerts(self) -> list[AlertRow]:
         rows = self._conn.execute(
-            "SELECT * FROM alerts WHERE state = 'firing' ORDER BY severity DESC, host"
+            "SELECT * FROM alerts WHERE state = 'firing' ORDER BY host, check_name"
         ).fetchall()
-        return [self._row_to_alert(r) for r in rows]
+        alerts = [self._row_to_alert(r) for r in rows]
+        return sorted(alerts, key=lambda a: -a.severity.rank)
 
     @staticmethod
     def _row_to_alert(row: sqlite3.Row) -> AlertRow:
