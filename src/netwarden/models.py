@@ -56,6 +56,7 @@ class Finding(BaseModel):
     message: str
     value: Any = None
     threshold: Any = None
+    context: dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=utcnow)
 
     @property

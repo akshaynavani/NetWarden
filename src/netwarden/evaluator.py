@@ -28,6 +28,7 @@ def _finding(
     message: str,
     value: Any = None,
     threshold: Any = None,
+    context: dict[str, Any] | None = None,
 ) -> Finding:
     return Finding(
         host=result.host,
@@ -37,6 +38,7 @@ def _finding(
         message=message,
         value=value,
         threshold=threshold,
+        context=context or {},
         timestamp=result.timestamp,
     )
 
@@ -79,9 +81,13 @@ def _eval_snmp(r: ProbeResult, t: Thresholds, prev: ProbeResult | None) -> list[
         label = iface.get("descr") or f"ifIndex {idx}"
         key = f"snmp.if_status.{idx}"
         admin, oper = iface.get("admin_status"), iface.get("oper_status")
+        ctx = {"if_index": idx, "if_descr": iface.get("descr")}
         if admin == "up" and oper not in ("up", None):
             out.append(
-                _finding(r, key, Severity.CRITICAL, f"{label} is admin-up but oper-{oper}", oper)
+                _finding(
+                    r, key, Severity.CRITICAL, f"{label} is admin-up but oper-{oper}", oper,
+                    context=ctx,
+                )
             )
         elif oper is None:
             out.append(_finding(r, key, Severity.WARNING, f"{label} not present on agent"))

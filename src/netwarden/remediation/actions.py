@@ -55,13 +55,15 @@ def _service_for(host: Host, family: str) -> str | None:
     return None
 
 
-def _restart(host: Host, family: str, finding: Finding) -> PlannedAction | None:
+def _restart(
+    host: Host, family: str, finding: Finding, action: str = "restart_service"
+) -> PlannedAction | None:
     svc = _service_for(host, family)
     if svc is None:
         return None
     return PlannedAction(
         host=host.name,
-        action="restart_service",
+        action=action,
         reason=finding.key,
         summary=f"restart {svc} on {host.name} ({finding.message})",
         commands=(
@@ -129,9 +131,8 @@ def plan_ntp_step(host: Host, f: Finding) -> PlannedAction | None:
 def plan_bounce_interface(host: Host, f: Finding) -> PlannedAction | None:
     if not f.check.startswith("snmp.if_status.") or f.severity != Severity.CRITICAL:
         return None
-    # The finding message begins with the ifDescr reported by SNMP.
-    descr = f.message.split(" ", 1)[0]
-    if descr not in host.remediation.interfaces:
+    descr = f.context.get("if_descr")
+    if not descr or descr not in host.remediation.interfaces:
         return None
     iface = safe(descr)
     return PlannedAction(
@@ -152,7 +153,7 @@ def plan_bounce_interface(host: Host, f: Finding) -> PlannedAction | None:
 def plan_restart_snmp_agent(host: Host, f: Finding) -> PlannedAction | None:
     if f.check != "snmp.reachability" or f.severity != Severity.CRITICAL:
         return None
-    return _restart(host, "snmp", f)
+    return _restart(host, "snmp", f, action="restart_snmp_agent")
 
 
 ACTION_PLANNERS = {
