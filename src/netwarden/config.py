@@ -23,7 +23,7 @@ KNOWN_ACTIONS = {
     "flush_dns_cache",
     "ntp_step",
     "bounce_interface",
-    "renew_dhcp_lease",
+    "restart_snmp_agent",
 }
 
 

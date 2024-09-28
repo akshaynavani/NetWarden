@@ -66,7 +66,7 @@ Files: `evaluator.py`, `state.py`, `alerts.py`, `notifiers.py`.
 Deliverables
 - Structured reports: JSON, Markdown and Rich console tables.
 - Remediation action catalogue (restart service, flush DNS cache, force NTP step, bounce
-  interface, renew DHCP lease) with shell templates and finding→action mapping rules.
+  interface, restart SNMP agent) with shell templates and finding→action mapping rules.
 - Planner that only proposes actions allowed for that host; script generator writing
   reviewable `.sh` files; executor running over SSH only when enabled + `--apply`; audit log.
 
