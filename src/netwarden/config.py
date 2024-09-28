@@ -243,8 +243,9 @@ class NotifierConfig(BaseModel):
     def _required_fields(self) -> "NotifierConfig":
         if self.type == "jsonl" and self.path is None:
             raise ValueError("jsonl notifier needs a path")
-        if self.type == "webhook" and not self.url:
-            raise ValueError("webhook notifier needs a url")
+        # An empty url (e.g. "${NETWARDEN_WEBHOOK_URL:-}") disables the webhook.
+        if self.type == "webhook" and self.url is None:
+            raise ValueError("webhook notifier needs a url key (may be empty to disable)")
         if self.type == "email" and not (self.smtp_host and self.sender and self.recipients):
             raise ValueError("email notifier needs smtp_host, sender and recipients")
         return self
