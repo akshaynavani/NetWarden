@@ -12,7 +12,6 @@ Two independent mechanisms, both optional per host:
 from __future__ import annotations
 
 import asyncio
-import os
 import random
 import re
 import socket
@@ -168,8 +167,6 @@ def parse_offer(packet: bytes, xid: int) -> dict[str, Any] | None:
 
 def discover_once(server_ip: str, interface: str | None, timeout: float) -> dict[str, Any]:
     """Blocking DISCOVER/OFFER exchange. Only OFFERs from ``server_ip`` are accepted."""
-    if hasattr(os, "geteuid") and os.geteuid() != 0:
-        raise PermissionError("active DHCP probe needs root to bind UDP port 68")
     xid = random.getrandbits(32)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     try:
@@ -177,7 +174,12 @@ def discover_once(server_ip: str, interface: str | None, timeout: float) -> dict
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         if interface and hasattr(socket, "SO_BINDTODEVICE"):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode())
-        sock.bind(("0.0.0.0", 68))
+        try:
+            sock.bind(("0.0.0.0", 68))
+        except PermissionError as exc:
+            raise PermissionError(
+                "active DHCP probe needs root or CAP_NET_BIND_SERVICE to bind UDP port 68"
+            ) from exc
         started = time.perf_counter()
         sock.sendto(build_discover(xid, random_mac()), ("255.255.255.255", 67))
         deadline = time.monotonic() + timeout
