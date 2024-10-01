@@ -38,7 +38,7 @@ after repeated failures, writes JSON and Markdown health reports, and can genera
 ```mermaid
 flowchart LR
     subgraph Config
-        Y[config.yaml + .env] --> C[Config loader<br/>pydantic + ${ENV}]
+        Y[config.yaml + .env] --> C["Config loader<br/>pydantic + env expansion"]
         C --> I[Inventory<br/>host allowlist]
     end
 
