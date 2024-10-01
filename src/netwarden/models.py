@@ -35,6 +35,14 @@ class Severity(str, Enum):
     def __gt__(self, other: "Severity") -> bool:  # type: ignore[override]
         return self.rank > other.rank
 
+    def __le__(self, other: "Severity") -> bool:  # type: ignore[override]
+        return self.rank <= other.rank
+
+    def __lt__(self, other: "Severity") -> bool:  # type: ignore[override]
+        return self.rank < other.rank
+
+    __hash__ = str.__hash__
+
 
 class ProbeResult(BaseModel):
     host: str
